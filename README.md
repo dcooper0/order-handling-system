@@ -15,25 +15,20 @@ Designed to demonstrate clean architecture, message-driven communication, and re
 Architecture Overview
 
 Frontend (index.html) 
-|
 v
 OrderHandlingApplication
 - REST Controller (/orders/placeOrder)
 - Sends Order to ActiveMQ Queue (PaymentAndStockChecks)
-|
 v
 ActiveMQ Broker
-|
 v
 OrderConsumerApplication
 - Listens for orders
 - Simulates payment + inventory checks
 - Sends processed/rejected Orders to JMS Queues
-|
 v
 OrderHandlingApplication
 - JMS listener updates browser clients via WebSocket (/topic/orders)
-
 ---------------------------------------------------------------
 
 Technologies used
