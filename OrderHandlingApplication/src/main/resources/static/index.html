@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order Handler</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; }
+        input, select, button { margin-top: 5px; padding: 5px; }
+        ul { list-style-type: none; padding-left: 0; }
+        li { background: #f2f2f2; margin: 4px 0; padding: 6px; border-radius: 4px; }
+        h2, h3 { color: #333; }
+        form { margin-bottom: 20px; }
+        em { color: #555; display: block; margin-bottom: 8px; }
+        a { color: #0073e6; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<h2>Place Order</h2>
+
+<p>
+    <em>
+        DEMO INFO: Available stock: Guitar: 3, Amplifier: 2, Microphone: 0 (out of stock).<br>
+        Use a valid customer name from
+        <a href="https://jsonplaceholder.typicode.com/users" target="_blank">https://jsonplaceholder.typicode.com/users</a>
+        e.g. "Leanne Graham", this app fetches customer details from that public API.
+    </em>
+</p>
+
+<form id="orderForm">
+    <label for="customerName">Customer Name:</label><br>
+    <input type="text" id="customerName" name="customerName" required><br><br>
+
+    <label for="productName">Select Product:</label><br>
+    <select id="productName" name="productName" required>
+        <option value="">-- Select --</option>
+        <option value="Guitar">Guitar</option>
+        <option value="Amplifier">Amplifier</option>
+        <option value="Microphone">Microphone</option>
+    </select><br><br>
+
+    <button type="submit">Place Order</button>
+</form>
+
+<hr>
+<h3>Order Updates:</h3>
+<ul id="updates"></ul>
+
+<script>
+    let stompClient = null;
+
+    function connectWebSocket() {
+        const socket = new SockJS('/orderProcessing');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, frame => {
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/orders', message => {
+                const order = JSON.parse(message.body);
+                showUpdate(`Order #${order.orderNumber} - ${order.productName} - ${order.orderstatus}`);
+            });
+        }, error => {
+            showUpdate("WebSocket connection failed.");
+            console.error("STOMP connection error:", error);
+        });
+    }
+
+    function showUpdate(text) {
+        const li = document.createElement("li");
+        li.textContent = text;
+        document.getElementById("updates").appendChild(li);
+        li.scrollIntoView();
+    }
+
+    document.getElementById("orderForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const name = document.getElementById("customerName").value;
+        const product = document.getElementById("productName").value;
+        const payload = { customerName: name, productName: product };
+
+        const response = await fetch("/orders/placeOrder", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            const order = await response.json();
+            showUpdate(`Order placed: ${order.productName} for ${order.customerName}`);
+        } else {
+            showUpdate("Error placing order");
+        }
+    });
+
+    connectWebSocket();
+</script>
+
+</body>
+</html>
